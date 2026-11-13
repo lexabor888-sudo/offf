@@ -1,0 +1,837 @@
+local Release = "v1.0"
+
+local Luna = { Folder = "Hub", Options = {}, ThemeGradient = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(117, 164, 206)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(123, 201, 201)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(224, 138, 175))} }
+
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local Localization = game:GetService("LocalizationService")
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local CoreGui = game:GetService("CoreGui")
+
+local isStudio
+local website = "github.com"
+
+if RunService:IsStudio() then isStudio = true end
+
+local IconModule = {
+	Lucide = nil,
+	Material = {
+		["view_in_ar"] = "http://www.roblox.com/asset/?id=6031097225";
+		["settings"] = "http://www.roblox.com/asset/?id=6031280882";
+		["location_searching"] = "http://www.roblox.com/asset/?id=6034996695";
+		["sparkle"] = "http://www.roblox.com/asset/?id=4483362748";
+		["visibility"] = "http://www.roblox.com/asset/?id=6031075931";
+		["directions_run"] = "http://www.roblox.com/asset/?id=6034754445";
+		["gavel"] = "http://www.roblox.com/asset/?id=6023565902";
+		["build"] = "http://www.roblox.com/asset/?id=6023426938";
+		["warning"] = "http://www.roblox.com/asset/?id=6031071053";
+		["error"] = "http://www.roblox.com/asset/?id=6031071057";
+		["info"] = "http://www.roblox.com/asset/?id=6026568227";
+		["lock_open"] = "http://www.roblox.com/asset/?id=6026568220";
+		["shield"] = "http://www.roblox.com/asset/?id=6035078889";
+	}
+}
+
+local request = (syn and syn.request) or (http and http.request) or http_request or nil
+local tweeninfo = TweenInfo.new(0.3, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out)
+local PresetGradients = {
+	["Default"] = {Color3.fromRGB(147, 255, 239), Color3.fromRGB(201,211,233), Color3.fromRGB(255, 167, 227)},
+	["Neo"] = {Color3.fromRGB(117, 164, 206), Color3.fromRGB(123, 201, 201), Color3.fromRGB(224, 138, 175)},
+}
+
+local function GetIcon(icon, source)
+	if source == "Custom" then return "rbxassetid://" .. icon
+	elseif source == "Lucide" then
+		local iconData = not isStudio and game:HttpGet("https://raw.githubusercontent.com/latte-soft/lucide-roblox/refs/heads/master/lib/Icons.luau")
+		local icons = isStudio and IconModule.Lucide or loadstring(iconData)()
+		if not isStudio then
+			icon = string.match(string.lower(icon), "^%s*(.*)%s*$")
+			local sizedicons = icons['48px']
+			local r = sizedicons[icon]
+			if not r then return "rbxassetid://10723434557" end
+			return {id = r[1], imageRectSize = Vector2.new(r[2][1], r[2][2]), imageRectOffset = Vector2.new(r[3][1], r[3][2])}
+		else return "rbxassetid://10723434557" end
+	else	
+		if icon ~= nil and IconModule[source] then return IconModule[source][icon] else return nil end
+	end
+end
+
+local function RemoveTable(tablre, value)
+	for i,v in pairs(tablre) do if tostring(v) == tostring(value) then table.remove(tablre, i) end end
+end
+
+local function Kwargify(defaults, passed)
+	for i, v in pairs(defaults) do if passed[i] == nil then passed[i] = v end end
+	return passed
+end
+
+function tween(object, goal, callback, tweenin)
+	local tween = TweenService:Create(object,tweenin or tweeninfo, goal)
+	tween.Completed:Connect(callback or function() end)
+	tween:Play()
+end
+
+local LunaUI = isStudio and script.Parent:WaitForChild("Luna UI") or game:GetObjects("rbxassetid://86467455075715")[1]
+local SizeBleh = nil
+
+local function Hide(Window, bind, notif)
+	SizeBleh = Window.Size
+	bind = string.split(tostring(bind), "Enum.KeyCode.")
+	bind = bind[2]
+	if notif then Luna:Notification({Title = "Interface Hidden", Content = "Press your UI Bind In Settings ("..tostring(bind)..") to reopen.", Icon = "visibility_off"}) end
+	tween(Window, {BackgroundTransparency = 1}); tween(Window.Elements, {BackgroundTransparency = 1}); tween(Window.Line, {BackgroundTransparency = 1})
+	tween(Window.Title.Title, {TextTransparency = 1}); tween(Window.Title.subtitle, {TextTransparency = 1}); tween(Window.Logo, {ImageTransparency = 1}); tween(Window.Navigation.Line, {BackgroundTransparency = 1})
+	for _, TopbarButton in ipairs(Window.Controls:GetChildren()) do
+		if TopbarButton.ClassName == "Frame" then
+			tween(TopbarButton, {BackgroundTransparency = 1}); tween(TopbarButton.UIStroke, {Transparency = 1}); tween(TopbarButton.ImageLabel, {ImageTransparency = 1}); TopbarButton.Visible = false
+		end
+	end
+	for _, tabbtn in ipairs(Window.Navigation.Tabs:GetChildren()) do
+		if tabbtn.ClassName == "Frame" and tabbtn.Name ~= "InActive Template" then
+			TweenService:Create(tabbtn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play()
+			TweenService:Create(tabbtn.ImageLabel, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
+			TweenService:Create(tabbtn.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 1}):Play()
+		end
+	end
+	task.wait(0.28); Window.Size = UDim2.new(0,0,0,0); Window.Parent.ShadowHolder.Visible = false
+	task.wait(); Window.Elements.Parent.Visible = false; Window.Visible = false
+end
+
+if gethui then LunaUI.Parent = gethui()
+elseif syn and syn.protect_gui then syn.protect_gui(LunaUI); LunaUI.Parent = CoreGui
+elseif not isStudio and CoreGui:FindFirstChild("RobloxGui") then LunaUI.Parent = CoreGui:FindFirstChild("RobloxGui")
+elseif not isStudio then LunaUI.Parent = CoreGui end
+
+if gethui then
+	for _, Interface in ipairs(gethui():GetChildren()) do
+		if Interface.Name == LunaUI.Name and Interface ~= LunaUI then Hide(Interface.SmartWindow); Interface.Enabled = false; Interface.Name = "Hub-Old" end
+	end
+elseif not isStudio then
+	for _, Interface in ipairs(CoreGui:GetChildren()) do
+		if Interface.Name == LunaUI.Name and Interface ~= LunaUI then Hide(Interface.SmartWindow); Interface.Enabled = false; Interface.Name = "Hub-Old" end
+	end
+end
+
+LunaUI.Enabled = false; LunaUI.SmartWindow.Visible = false; LunaUI.Notifications.Template.Visible = false; LunaUI.DisplayOrder = 1000000000
+
+local Main : Frame = LunaUI.SmartWindow
+local Dragger = Main.Drag; local dragBar = LunaUI.Drag; local dragInteract = dragBar and dragBar.Interact or nil; local dragBarCosmetic = dragBar and dragBar.Drag or nil
+local Elements = Main.Elements.Interactions; local LoadingFrame = Main.LoadingFrame; local Navigation = Main.Navigation; local Tabs = Navigation.Tabs; local Notifications = LunaUI.Notifications; local KeySystem : Frame = Main.KeySystem
+
+local function Draggable(Bar, Window, enableTaptic)
+	pcall(function()
+		local Dragging, DragInput, MousePos, FramePos
+		Bar.InputBegan:Connect(function(Input)
+			if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+				Dragging = true; MousePos = Input.Position; FramePos = Window.Position
+				Input.Changed:Connect(function()
+					if Input.UserInputState == Enum.UserInputState.End then Dragging = false end
+				end)
+			end
+		end)
+		Bar.InputChanged:Connect(function(Input)
+			if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then DragInput = Input end
+		end)
+		UserInputService.InputChanged:Connect(function(Input)
+			if Input == DragInput and Dragging then
+				local Delta = Input.Position - MousePos
+				local newMainPosition = UDim2.new(FramePos.X.Scale, FramePos.X.Offset + Delta.X, FramePos.Y.Scale, FramePos.Y.Offset + Delta.Y)
+				TweenService:Create(Window, TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Position = newMainPosition}):Play()
+				if dragBar then dragBar.Position = UDim2.new(FramePos.X.Scale, FramePos.X.Offset + Delta.X, FramePos.Y.Scale, FramePos.Y.Offset + Delta.Y + 240) end
+			end
+		end)
+	end)
+end
+
+function Luna:Notification(data)
+	task.spawn(function()
+		data = Kwargify({Title = "Notification", Content = "Content", Icon = "view_in_ar", ImageSource = "Material"}, data or {})
+		local newNotification = Notifications.Template:Clone()
+		newNotification.Name = data.Title; newNotification.Parent = Notifications; newNotification.LayoutOrder = #Notifications:GetChildren(); newNotification.Visible = false
+		newNotification.Title.Text = data.Title; newNotification.Description.Text = data.Content; newNotification.Icon.Image = GetIcon(data.Icon, data.ImageSource)
+		newNotification.BackgroundTransparency = 1; newNotification.Title.TextTransparency = 1; newNotification.Description.TextTransparency = 1; newNotification.UIStroke.Transparency = 1; newNotification.Shadow.ImageTransparency = 1; newNotification.Icon.ImageTransparency = 1; newNotification.Icon.BackgroundTransparency = 1
+		task.wait(); newNotification.Size = UDim2.new(1, 0, 0, -Notifications:FindFirstChild("UIListLayout").Padding.Offset); newNotification.Icon.Size = UDim2.new(0, 28, 0, 28); newNotification.Icon.Position = UDim2.new(0, 16, 0.5, -1); newNotification.Visible = true
+		newNotification.Description.Size = UDim2.new(1, -65, 0, math.huge); local bounds = newNotification.Description.TextBounds.Y + 55; newNotification.Description.Size = UDim2.new(1,-65,0, bounds - 35); newNotification.Size = UDim2.new(1, 0, 0, -Notifications:FindFirstChild("UIListLayout").Padding.Offset)
+		TweenService:Create(newNotification, TweenInfo.new(0.6, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, 0, 0, bounds)}):Play()
+		task.wait(0.15); TweenService:Create(newNotification, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.45}):Play(); TweenService:Create(newNotification.Title, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
+		task.wait(0.05); TweenService:Create(newNotification.Icon, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
+		task.wait(0.05); TweenService:Create(newNotification.Description, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 0.35}):Play(); TweenService:Create(newNotification.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 0.95}):Play(); TweenService:Create(newNotification.Shadow, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0.82}):Play()
+		task.wait(data.Duration or 3)
+		newNotification.Icon.Visible = false; TweenService:Create(newNotification, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {BackgroundTransparency = 1}):Play(); TweenService:Create(newNotification.UIStroke, TweenInfo.new(0.4, Enum.EasingStyle.Exponential), {Transparency = 1}):Play(); TweenService:Create(newNotification.Shadow, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play(); TweenService:Create(newNotification.Title, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play(); TweenService:Create(newNotification.Description, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
+		TweenService:Create(newNotification, TweenInfo.new(1, Enum.EasingStyle.Exponential), {Size = UDim2.new(1, -90, 0, 0)}):Play()
+		task.wait(1); newNotification.Visible = false; newNotification:Destroy()
+	end)
+end
+
+local function Unhide(Window, currentTab)
+	Window.Size = SizeBleh; Window.Elements.Visible = true; Window.Visible = true
+	task.wait(); tween(Window, {BackgroundTransparency = 0.2}); tween(Window.Elements, {BackgroundTransparency = 0.08}); tween(Window.Line, {BackgroundTransparency = 0})
+	tween(Window.Title.Title, {TextTransparency = 0}); tween(Window.Title.subtitle, {TextTransparency = 0}); tween(Window.Logo, {ImageTransparency = 0}); tween(Window.Navigation.Line, {BackgroundTransparency = 0})
+	for _, TopbarButton in ipairs(Window.Controls:GetChildren()) do
+		if TopbarButton.ClassName == "Frame" and TopbarButton.Name ~= "Theme" then
+			TopbarButton.Visible = true; tween(TopbarButton, {BackgroundTransparency = 0.25}); tween(TopbarButton.UIStroke, {Transparency = 0.5}); tween(TopbarButton.ImageLabel, {ImageTransparency = 0.25})
+		end
+	end
+	for _, tabbtn in ipairs(Window.Navigation.Tabs:GetChildren()) do
+		if tabbtn.ClassName == "Frame" and tabbtn.Name ~= "InActive Template" then
+			if tabbtn.Name == currentTab then
+				TweenService:Create(tabbtn, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0}):Play(); TweenService:Create(tabbtn.UIStroke, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {Transparency = 0.41}):Play()
+			end
+			TweenService:Create(tabbtn.ImageLabel, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
+		end
+	end
+end
+
+local MainSize = Camera.ViewportSize.X > 774 and UDim2.fromOffset(675, 424) or UDim2.fromOffset(Camera.ViewportSize.X - 100, Camera.ViewportSize.Y - 100)
+local MinSize = Camera.ViewportSize.X > 774 and UDim2.fromOffset(500, 42) or UDim2.fromOffset(Camera.ViewportSize.X - 275, 42)
+
+local function Maximise(Window)
+	Window.Controls.ToggleSize.ImageLabel.Image = "rbxassetid://10137941941"
+	tween(Window, {Size = MainSize}); Window.Elements.Visible = true; Window.Navigation.Visible = true
+end
+
+local function Minimize(Window)
+	Window.Controls.ToggleSize.ImageLabel.Image = "rbxassetid://11036884234"
+	Window.Elements.Visible = false; Window.Navigation.Visible = false; tween(Window, {Size = MinSize})
+end
+
+function Luna:CreateWindow(WindowSettings)
+	WindowSettings = Kwargify({Name = "Hub", Subtitle = "", LogoID = "6031097225", LoadingEnabled = true, LoadingTitle = "Hub", LoadingSubtitle = "by lsp", ConfigSettings = {}, KeySystem = false, KeySettings = {}}, WindowSettings or {})
+	WindowSettings.ConfigSettings = Kwargify({RootFolder = nil, ConfigFolder = "Big Hub"}, WindowSettings.ConfigSettings or {})
+	WindowSettings.KeySettings = Kwargify({Title = WindowSettings.Name, Subtitle = "Key System", Note = "No Instructions", SaveInRoot = false, SaveKey = true, Key = {""}, SecondAction = {}}, WindowSettings.KeySettings or {})
+	WindowSettings.KeySettings.SecondAction = Kwargify({Enabled = false, Type = "Discord", Parameter = ""}, WindowSettings.KeySettings.SecondAction)
+
+	local Passthrough = false
+	local Window = { Bind = Enum.KeyCode.Home, CurrentTab = nil, State = true, Size = false, Settings = nil }
+
+	Main.Title.Title.Text = WindowSettings.Name; Main.Title.subtitle.Text = WindowSettings.Subtitle; Main.Logo.Image = "rbxassetid://" .. WindowSettings.LogoID
+	Main.Visible = true; Main.BackgroundTransparency = 1; Main.Size = UDim2.fromOffset(MainSize.X.Offset - 70, MainSize.Y.Offset - 55); Main.Parent.ShadowHolder.Size = Main.Size
+	LoadingFrame.Frame.Frame.Title.TextTransparency = 1; LoadingFrame.Frame.Frame.Subtitle.TextTransparency = 1; LoadingFrame.Version.TextTransparency = 1; LoadingFrame.Frame.ImageLabel.ImageTransparency = 1
+
+	tween(Elements.Parent, {BackgroundTransparency = 1}); Elements.Parent.Visible = false
+	LoadingFrame.Frame.Frame.Title.Text = WindowSettings.LoadingTitle; LoadingFrame.Frame.Frame.Subtitle.Text = WindowSettings.LoadingSubtitle; LoadingFrame.Version.Text = "Hub " .. Release
+	Navigation.Player.icon.ImageLabel.Image = Players:GetUserThumbnailAsync(Players.LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+	Navigation.Player.Namez.Text = Players.LocalPlayer.DisplayName; Navigation.Player.TextLabel.Text = Players.LocalPlayer.Name
+
+	for i,v in pairs(Main.Controls:GetChildren()) do v.Visible = false end
+	Main:GetPropertyChangedSignal("Position"):Connect(function() Main.Parent.ShadowHolder.Position = Main.Position end)
+	Main:GetPropertyChangedSignal("Size"):Connect(function() Main.Parent.ShadowHolder.Size = Main.Size end)
+	LoadingFrame.Visible = true; LunaUI.Enabled = true
+
+	if WindowSettings.KeySystem then
+		Draggable(Dragger, Main); Draggable(LunaUI.MobileSupport, LunaUI.MobileSupport); if dragBar then Draggable(dragInteract, Main, true) end
+		if not WindowSettings.KeySettings then Passthrough = true return end
+		WindowSettings.KeySettings.FileName = "key"
+		if typeof(WindowSettings.KeySettings.Key) == "string" then WindowSettings.KeySettings.Key = {WindowSettings.KeySettings.Key} end
+		local direc = WindowSettings.KeySettings.SaveInRoot and "Hub/Configurations/" .. WindowSettings.ConfigSettings.RootFolder .. "/" .. WindowSettings.ConfigSettings.ConfigFolder .. "/Key System/" or "Hub/Configurations/" ..  WindowSettings.ConfigSettings.ConfigFolder .. "/Key System/"
+		if isfile and isfile(direc .. WindowSettings.KeySettings.FileName .. ".luna") then
+			for i, Key in ipairs(WindowSettings.KeySettings.Key) do if string.find(readfile(direc .. WindowSettings.KeySettings.FileName .. ".luna"), Key) then Passthrough = true break end end
+		end
+		if not Passthrough then
+			local Btn = KeySystem.Action.Copy; local typesys = KeySettings.SecondAction.Type; if typesys == "Discord" then Btn = KeySystem.Action.Discord end
+			local AttemptsRemaining = math.random(2, 5)
+			KeySystem.Visible = true; KeySystem.Title.Text = WindowSettings.KeySettings.Title; KeySystem.Subtitle.Text = WindowSettings.KeySettings.Subtitle; KeySystem.textshit.Text = WindowSettings.KeySettings.Note
+			if KeySettings.SecondAction.Enabled == true then Btn.Visible = true end
+			KeySystem.Action.Submit.Interact.MouseButton1Click:Connect(function()
+				local KeyFound = false; local FoundKey = ''
+				for _, Key in ipairs(WindowSettings.KeySettings.Key) do if KeySystem.Input.InputBox.Text == Key then KeyFound = true; FoundKey = Key; break end end
+				if KeyFound then 
+					KeySystem.Visible = false; Passthrough = true
+					if WindowSettings.KeySettings.SaveKey then if writefile then writefile(direc .. WindowSettings.KeySettings.FileName .. ".luna", FoundKey) end; Luna:Notification({Title = "Key System", Content = "Saved successfully.", Icon = "lock_open"}) end
+				else
+					if AttemptsRemaining == 0 then game.Players.LocalPlayer:Kick("No Attempts Remaining"); game:Shutdown() end
+					KeySystem.Input.InputBox.Text = "Incorrect Key"; AttemptsRemaining = AttemptsRemaining - 1; task.wait(0.4); KeySystem.Input.InputBox.Text = ""
+				end
+			end)
+		end
+	end
+	if WindowSettings.KeySystem then repeat task.wait() until Passthrough end
+
+	if WindowSettings.LoadingEnabled then
+		task.wait(0.3); TweenService:Create(LoadingFrame.Frame.Frame.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play(); TweenService:Create(LoadingFrame.Frame.ImageLabel, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 0}):Play()
+		task.wait(0.05); TweenService:Create(LoadingFrame.Frame.Frame.Subtitle, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play(); TweenService:Create(LoadingFrame.Version, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()
+		task.wait(0.29); TweenService:Create(LoadingFrame.Frame.ImageLabel, TweenInfo.new(1.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 2, false, 0.2), {Rotation = 450}):Play()
+		task.wait(3.32)
+		TweenService:Create(LoadingFrame.Frame.Frame.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play(); TweenService:Create(LoadingFrame.Frame.ImageLabel, TweenInfo.new(0.3, Enum.EasingStyle.Exponential), {ImageTransparency = 1}):Play()
+		task.wait(0.05); TweenService:Create(LoadingFrame.Frame.Frame.Subtitle, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play(); TweenService:Create(LoadingFrame.Version, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 1}):Play()
+		wait(0.3); TweenService:Create(LoadingFrame, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+	end
+
+	TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {BackgroundTransparency = 0.2, Size = MainSize}):Play()
+	TweenService:Create(Main.Parent.ShadowHolder, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Size = MainSize}):Play()
+	TweenService:Create(Main.Title.Title, TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {TextTransparency = 0}):Play(); TweenService:Create(Main.Title.subtitle, TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+	TweenService:Create(Main.Logo, TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play(); TweenService:Create(Navigation.Player.icon.ImageLabel, TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play()
+	TweenService:Create(Navigation.Player.icon.UIStroke, TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {Transparency = 0}):Play(); TweenService:Create(Main.Line, TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+	wait(0.4); LoadingFrame.Visible = false
+
+	Draggable(Dragger, Main); Draggable(LunaUI.MobileSupport, LunaUI.MobileSupport); if dragBar then Draggable(dragInteract, Main, true) end
+	Elements.Template.LayoutOrder = 1000000000; Elements.Template.Visible = false; Navigation.Tabs["InActive Template"].LayoutOrder = 1000000000; Navigation.Tabs["InActive Template"].Visible = false
+
+	local FirstTab = true
+
+	function Window:CreateTab(TabSettings)
+		local Tab = {}
+		TabSettings = Kwargify({Name = "Tab", ShowTitle = true, Icon = "view_in_ar", ImageSource = "Material"}, TabSettings or {})
+		local TabButton = Navigation.Tabs["InActive Template"]:Clone()
+		TabButton.Name = TabSettings.Name; TabButton.TextLabel.Text = TabSettings.Name; TabButton.Parent = Navigation.Tabs; TabButton.ImageLabel.Image = GetIcon(TabSettings.Icon, TabSettings.ImageSource); TabButton.Visible = true
+		local TabPage = Elements.Template:Clone()
+		TabPage.Name = TabSettings.Name; TabPage.Title.Visible = TabSettings.ShowTitle; TabPage.Title.Text = TabSettings.Name; TabPage.Visible = true; Tab.Page = TabPage
+		if TabSettings.ShowTitle == false then TabPage.UIPadding.PaddingTop = UDim.new(0,10) end
+		TabPage.LayoutOrder = #Elements:GetChildren() - 3
+		for _, TemplateElement in ipairs(TabPage:GetChildren()) do if TemplateElement.ClassName == "Frame" or TemplateElement.ClassName == "TextLabel" and TemplateElement.Name ~= "Title" then TemplateElement:Destroy() end end
+		TabPage.Parent = Elements
+
+		function Tab:Activate()
+			tween(TabButton.ImageLabel, {ImageColor3 = Color3.fromRGB(255,255,255)}); tween(TabButton, {BackgroundTransparency = 0}); tween(TabButton.UIStroke, {Transparency = 0.41}); Elements.UIPageLayout:JumpTo(TabPage)
+			task.wait(0.05)
+			for _, OtherTabButton in ipairs(Navigation.Tabs:GetChildren()) do
+				if OtherTabButton.Name ~= "InActive Template" and OtherTabButton.ClassName == "Frame" and OtherTabButton ~= TabButton then tween(OtherTabButton.ImageLabel, {ImageColor3 = Color3.fromRGB(221,221,221)}); tween(OtherTabButton, {BackgroundTransparency = 1}); tween(OtherTabButton.UIStroke, {Transparency = 1}) end
+			end
+			Window.CurrentTab = TabSettings.Name
+		end
+		if FirstTab then Tab:Activate() end
+		task.wait(0.01); TabButton.Interact.MouseButton1Click:Connect(function() Tab:Activate() end); FirstTab = false
+
+		function Tab:CreateSection(name : string)
+			local Section = {}
+			if name == nil then name = "Section" end
+			Section.Name = name
+			local Sectiont = Elements.Template.Section:Clone()
+			Sectiont.Text = name; Sectiont.Visible = true; Sectiont.Parent = TabPage; local TabPage = Sectiont.Frame
+			Sectiont.TextTransparency = 1; tween(Sectiont, {TextTransparency = 0})
+			function Section:Set(NewSection) Sectiont.Text = NewSection end
+			function Section:Destroy() Sectiont:Destroy() end
+
+			function Section:CreateToggle(ToggleSettings, Flag)    
+				TabPage.Position = UDim2.new(0,0,0,28)
+				local ToggleV = { IgnoreConfig = false, Class = "Toggle" }
+				ToggleSettings = Kwargify({Name = "Toggle", Description = nil, CurrentValue = false, Callback = function(Value) end}, ToggleSettings or {})
+				local Toggle
+				if ToggleSettings.Description ~= nil and ToggleSettings.Description ~= "" then Toggle = Elements.Template.ToggleDesc:Clone() else Toggle = Elements.Template.Toggle:Clone() end
+				Toggle.Visible = true; Toggle.Parent = TabPage; Toggle.Name = ToggleSettings.Name .. " - Toggle"; Toggle.Title.Text = ToggleSettings.Name
+				if ToggleSettings.Description ~= nil and ToggleSettings.Description ~= "" then Toggle.Desc.Text = ToggleSettings.Description end
+				Toggle.UIStroke.Transparency = 1; Toggle.Title.TextTransparency = 1
+				if ToggleSettings.Description ~= nil and ToggleSettings.Description ~= "" then Toggle.Desc.TextTransparency = 1 end
+				TweenService:Create(Toggle, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.5}):Play()
+				if ToggleSettings.Description ~= nil and ToggleSettings.Description ~= "" then TweenService:Create(Toggle.Desc, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play() end
+				TweenService:Create(Toggle.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play(); TweenService:Create(Toggle.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()	
+				local function Set(bool)
+					if bool then
+						Toggle.toggle.color.Enabled = true; tween(Toggle.toggle, {BackgroundTransparency = 0}); Toggle.toggle.UIStroke.color.Enabled = true; tween(Toggle.toggle.UIStroke, {Color = Color3.new(255,255,255)}); tween(Toggle.toggle.val, {BackgroundColor3 = Color3.fromRGB(255,255,255), Position = UDim2.new(1,-23,0.5,0), BackgroundTransparency = 0.45})
+					else
+						Toggle.toggle.color.Enabled = false; Toggle.toggle.UIStroke.color.Enabled = false; Toggle.toggle.UIStroke.Color = Color3.fromRGB(97,97,97); tween(Toggle.toggle, {BackgroundTransparency = 1}); tween(Toggle.toggle.val, {BackgroundColor3 = Color3.fromRGB(97,97,97), Position = UDim2.new(0,5,0.5,0), BackgroundTransparency = 0})
+					end
+					ToggleV.CurrentValue = bool
+				end
+				Toggle.Interact.MouseButton1Click:Connect(function()
+					ToggleSettings.CurrentValue = not ToggleSettings.CurrentValue; Set(ToggleSettings.CurrentValue)
+					pcall(function() ToggleSettings.Callback(ToggleSettings.CurrentValue) end)
+				end)
+				Toggle["MouseEnter"]:Connect(function() tween(Toggle.UIStroke, {Color = Color3.fromRGB(87, 84, 104)}) end); Toggle["MouseLeave"]:Connect(function() tween(Toggle.UIStroke, {Color = Color3.fromRGB(64,61,76)}) end)
+				if ToggleSettings.CurrentValue then Set(ToggleSettings.CurrentValue); pcall(function() ToggleSettings.Callback(ToggleSettings.CurrentValue) end) end
+				function ToggleV:UpdateState(State) ToggleSettings.CurrentValue = State; Set(ToggleSettings.CurrentValue) end
+				function ToggleV:Set(NewToggleSettings)
+					NewToggleSettings = Kwargify({Name = ToggleSettings.Name, Description = ToggleSettings.Description, CurrentValue = ToggleSettings.CurrentValue, Callback = ToggleSettings.Callback}, NewToggleSettings or {})
+					ToggleV.Settings = NewToggleSettings; ToggleSettings = NewToggleSettings
+					Set(ToggleSettings.CurrentValue); ToggleV.CurrentValue = ToggleSettings.CurrentValue
+					pcall(function() ToggleSettings.Callback(ToggleSettings.CurrentValue) end)
+				end
+				function ToggleV:Destroy() Toggle.Visible = false; Toggle:Destroy() end
+				if Flag then Luna.Options[Flag] = ToggleV end
+				return ToggleV
+			end
+
+			function Section:CreateSlider(SliderSettings, Flag)
+				TabPage.Position = UDim2.new(0,0,0,28)
+				local SliderV = { IgnoreConfig = false, Class = "Slider", Settings = SliderSettings }
+				SliderSettings = Kwargify({Name = "Slider", Range = {0, 200}, Increment = 1, CurrentValue = 100, Callback = function(Value) end}, SliderSettings or {})
+				local SLDragging = false
+				local Slider = Elements.Template.Slider:Clone()
+				Slider.Name = SliderSettings.Name .. " - Slider"; Slider.Title.Text = SliderSettings.Name; Slider.Visible = true; Slider.Parent = TabPage
+				Slider.BackgroundTransparency = 1; Slider.UIStroke.Transparency = 1; Slider.Title.TextTransparency = 1
+				TweenService:Create(Slider, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {BackgroundTransparency = 0.5}):Play(); TweenService:Create(Slider.UIStroke, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {Transparency = 0.5}):Play(); TweenService:Create(Slider.Title, TweenInfo.new(0.7, Enum.EasingStyle.Exponential), {TextTransparency = 0}):Play()	
+				Slider.Main.Progress.Size = UDim2.new(0, Slider.Main.AbsoluteSize.X * ((SliderSettings.CurrentValue + SliderSettings.Range[1]) / (SliderSettings.Range[2] - SliderSettings.Range[1])) > 5 and Slider.Main.AbsoluteSize.X * (SliderSettings.CurrentValue / (SliderSettings.Range[2] - SliderSettings.Range[1])) or 5, 1, 0)
+				Slider.Value.Text = tostring(SliderSettings.CurrentValue); SliderV.CurrentValue = Slider.Value.Text; SliderSettings.Callback(SliderSettings.CurrentValue)
+				Slider["MouseEnter"]:Connect(function() tween(Slider.UIStroke, {Color = Color3.fromRGB(87, 84, 104)}) end); Slider["MouseLeave"]:Connect(function() tween(Slider.UIStroke, {Color = Color3.fromRGB(64,61,76)}) end)
+				Slider.Interact.InputBegan:Connect(function(Input) if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then SLDragging = true end end)
+				Slider.Interact.InputEnded:Connect(function(Input) if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then SLDragging = false end end)
+				Slider.Interact.MouseButton1Down:Connect(function()
+					local Current = Slider.Main.Progress.AbsolutePosition.X + Slider.Main.Progress.AbsoluteSize.X; local Start = Current; local Location
+					local Loop; Loop = RunService.Stepped:Connect(function()
+						if SLDragging then
+							Location = UserInputService:GetMouseLocation().X; Current = Current + 0.025 * (Location - Start)
+							if Location < Slider.Main.AbsolutePosition.X then Location = Slider.Main.AbsolutePosition.X elseif Location > Slider.Main.AbsolutePosition.X + Slider.Main.AbsoluteSize.X then Location = Slider.Main.AbsolutePosition.X + Slider.Main.AbsoluteSize.X end
+							if Current < Slider.Main.AbsolutePosition.X + 5 then Current = Slider.Main.AbsolutePosition.X + 5 elseif Current > Slider.Main.AbsolutePosition.X + Slider.Main.AbsoluteSize.X then Current = Slider.Main.AbsolutePosition.X + Slider.Main.AbsoluteSize.X end
+							if Current <= Location and (Location - Start) < 0 then Start = Location elseif Current >= Location and (Location - Start) > 0 then Start = Location end
+							Slider.Main.Progress.Size = UDim2.new(0, Location - Slider.Main.AbsolutePosition.X, 1, 0)
+							local NewValue = SliderSettings.Range[1] + (Location - Slider.Main.AbsolutePosition.X) / Slider.Main.AbsoluteSize.X * (SliderSettings.Range[2] - SliderSettings.Range[1])
+							NewValue = math.floor(NewValue / SliderSettings.Increment + 0.5) * (SliderSettings.Increment * 10000000) / 10000000
+							Slider.Value.Text = tostring(NewValue)
+							if SliderSettings.CurrentValue ~= NewValue then pcall(function() SliderSettings.Callback(NewValue) end); SliderSettings.CurrentValue = NewValue; SliderV.CurrentValue = SliderSettings.CurrentValue end
+						else
+							TweenService:Create(Slider.Main.Progress, TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.In, 0, false), {Size = UDim2.new(0, Location - Slider.Main.AbsolutePosition.X > 5 and Location - Slider.Main.AbsolutePosition.X or 5, 1, 0)}):Play(); Loop:Disconnect()
+						end
+					end)
+				end)
+				function SliderV:UpdateValue(Value) Set(tonumber(Value)) end 
+				Slider.Value:GetPropertyChangedSignal("Text"):Connect(function()
+					local text = Slider.Value.Text
+					if not tonumber(text) and text ~= "." then Slider.Value.Text = text:match("[0-9.]*") or "" end
+					if SliderSettings.Range[2] < (tonumber(Slider.Value.Text) or 0) then Slider.Value.Text = SliderSettings.Range[2] end
+					Slider.Value.Size = UDim2.fromOffset(Slider.Value.TextBounds.X, 23)
+					Set(tonumber(Slider.Value.Text), true)
+				end)
+				function SliderV:Set(NewSliderSettings)
+					NewSliderSettings = Kwargify({Name = SliderSettings.Name, Range = SliderSettings.Range, Increment = SliderSettings.Increment, CurrentValue = SliderSettings.CurrentValue, Callback = SliderSettings.Callback}, NewSliderSettings or {})
+					SliderSettings = NewSliderSettings; SliderV.Settings = NewSliderSettings; Set()
+				end
+				function SliderV:Destroy() Slider.Visible = false; Slider:Destroy() end
+				if Flag then Luna.Options[Flag] = SliderV end
+				return SliderV
+			end
+			return Section
+		end
+		return Tab
+	end
+
+	Elements.Parent.Visible = true; tween(Elements.Parent, {BackgroundTransparency = 0.1}); Navigation.Visible = true; tween(Navigation.Line, {BackgroundTransparency = 0})
+
+	for _, TopbarButton in ipairs(Main.Controls:GetChildren()) do
+		if TopbarButton.ClassName == "Frame" and TopbarButton.Name ~= "Theme" then TopbarButton.Visible = true; tween(TopbarButton, {BackgroundTransparency = 0.25}); tween(TopbarButton.UIStroke, {Transparency = 0.5}); tween(TopbarButton.ImageLabel, {ImageTransparency = 0.25}) end
+	end
+
+	Main.Controls.Close.ImageLabel.MouseButton1Click:Connect(function() Hide(Main, Window.Bind, true); dragBar.Visible = false; Window.State = false; if not UserInputService.KeyboardEnabled then LunaUI.MobileSupport.Visible = true end end)
+	Main.Controls.Close["MouseEnter"]:Connect(function() tween(Main.Controls.Close.ImageLabel, {ImageColor3 = Color3.new(1,1,1)}) end); Main.Controls.Close["MouseLeave"]:Connect(function() tween(Main.Controls.Close.ImageLabel, {ImageColor3 = Color3.fromRGB(195,195,195)}) end)
+
+	UserInputService.InputBegan:Connect(function(input, gpe)
+		if gpe then return end
+		if input.KeyCode == Window.Bind then
+			if not Window.State then
+				Unhide(Main, Window.CurrentTab)
+				LunaUI.MobileSupport.Visible = false
+				dragBar.Visible = true
+				Window.State = true
+			else
+				Hide(Main, Window.Bind, false)
+				dragBar.Visible = false
+				Window.State = false
+				if not UserInputService.KeyboardEnabled then LunaUI.MobileSupport.Visible = true end
+			end
+		end
+	end)
+
+	Main.Logo.MouseButton1Click:Connect(function()
+		if Navigation.Size.X.Offset == 205 then tween(Elements.Parent, {Size = UDim2.new(1, -55, Elements.Parent.Size.Y.Scale, Elements.Parent.Size.Y.Offset)}); tween(Navigation, {Size = UDim2.new(Navigation.Size.X.Scale, 55, Navigation.Size.Y.Scale, Navigation.Size.Y.Offset)})
+		else tween(Elements.Parent, {Size = UDim2.new(1, -205, Elements.Parent.Size.Y.Scale, Elements.Parent.Size.Y.Offset)}); tween(Navigation, {Size = UDim2.new(Navigation.Size.X.Scale, 205, Navigation.Size.Y.Scale, Navigation.Size.Y.Offset)}) end
+	end)
+
+	Main.Controls.ToggleSize.ImageLabel.MouseButton1Click:Connect(function()
+		Window.Size = not Window.Size
+		if Window.Size then Minimize(Main); dragBar.Visible = false else Maximise(Main); dragBar.Visible = true end
+	end)
+	Main.Controls.ToggleSize["MouseEnter"]:Connect(function() tween(Main.Controls.ToggleSize.ImageLabel, {ImageColor3 = Color3.new(1,1,1)}) end); Main.Controls.ToggleSize["MouseLeave"]:Connect(function() tween(Main.Controls.ToggleSize.ImageLabel, {ImageColor3 = Color3.fromRGB(195,195,195)}) end)
+
+	LunaUI.MobileSupport.Interact.MouseButton1Click:Connect(function() Unhide(Main, Window.CurrentTab); dragBar.Visible = true; Window.State = true; LunaUI.MobileSupport.Visible = false end)
+	return Window
+end
+
+function Luna:Destroy()
+	Main.Visible = false
+	for _, Notification in ipairs(Notifications:GetChildren()) do if Notification.ClassName == "Frame" then Notification.Visible = false; Notification:Destroy() end end
+	LunaUI:Destroy()
+end
+
+-- ==========================================
+-- ACTUAL SCRIPT IMPLEMENTATION
+-- ==========================================
+local Window = Luna:CreateWindow({
+    Name = "хелпа для обидчиков", Subtitle = "by lsp", LogoID = "6031097225", LoadingEnabled = true,
+    LoadingTitle = "хелпа для обидчиков", LoadingSubtitle = "by lsp | loading...", KeySystem = false,
+})
+
+Luna:Notification({ Title = "Welcome", Icon = "sparkle", ImageSource = "Material", Content = "Скрипт успешно загружен. Нажми Home, чтобы скрыть/показать меню." })
+
+local TabCombat = Window:CreateTab({Name = "Combat", Icon = "gavel", ImageSource = "Material", ShowTitle = true})
+local TabMovement = Window:CreateTab({Name = "Movement", Icon = "directions_run", ImageSource = "Material", ShowTitle = true})
+local TabVisuals = Window:CreateTab({Name = "Visuals", Icon = "visibility", ImageSource = "Material", ShowTitle = true})
+local TabUtility = Window:CreateTab({Name = "Utility", Icon = "build", ImageSource = "Material", ShowTitle = true})
+
+-- ==================== ПЕРЕМЕННЫЕ И ЛОГИКА ====================
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- Настройки
+_G.HeadSize = 15
+local hitboxEnabled = true
+local aimbotEnabled = false
+local aimbotFOV = 150
+local aimbotSmooth = 0.3
+local aimbotConn = nil
+
+-- FLY
+local flying = false
+local flySpeed = 50 
+local flyHum, noclipConn, flyConn
+
+-- ESP
+local espEnabled = { Police = false, Inmates = false, Criminals = false }
+local espColors = { Police = Color3.fromRGB(0, 140, 255), Inmates = Color3.fromRGB(255, 170, 0), Criminals = Color3.fromRGB(255, 0, 0) }
+
+-- FREECAM
+local freecamEnabled = false
+local freecamRotating = false
+local freecamSpeed = 50
+local freecamHeldKeys = {}
+local freecamRotation = Vector2.zero
+local freecamPosition = Vector3.zero
+local savedCameraType, savedCameraSubject, savedCFrame
+local savedHRP, savedHRPAnchored
+local savedWalkSpeed, savedJumpPower, savedJumpHeight
+
+-- TELEPORT
+local teleportEnabled = false
+local markerEnabled = true
+local MAX_DISTANCE = 1000
+local HEIGHT_OFFSET = 3
+local mouseOverGui = false
+
+-- ФУНКЦИИ
+local function updateHitbox(char)
+    if not hitboxEnabled or not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum and hum.Health > 0 then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp and hrp.Size ~= Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize) then
+            hrp.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
+            hrp.Transparency = 0.5; hrp.BrickColor = BrickColor.new("Really blue"); hrp.Material = Enum.Material.Neon; hrp.CanCollide = false; hrp.CanQuery = true
+        end
+        local head = char:FindFirstChild("Head")
+        if head and head.Size.Magnitude > 3 then head.Size = Vector3.new(2, 1, 1); head.Transparency = 0; head.Material = Enum.Material.SmoothPlastic; head.CanCollide = true end
+    end
+end
+
+local function resetHitbox(char)
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart"); local head = char:FindFirstChild("Head")
+    if hrp then pcall(function() hrp.Size = Vector3.new(2, 2, 1); hrp.Transparency = 1; hrp.CanCollide = false end) end
+    if head then pcall(function() head.Size = Vector3.new(2, 1, 1); head.Transparency = 0; head.Material = Enum.Material.SmoothPlastic; head.CanCollide = true end) end
+end
+
+task.spawn(function() while task.wait(0.5) do if hitboxEnabled then for _, v in ipairs(Players:GetPlayers()) do if v ~= LocalPlayer then updateHitbox(v.Character) end end end end end)
+
+local function getClosestPlayer()
+    local closest = nil; local shortestDist = aimbotFOV; local center = camera.ViewportSize / 2
+    for _, v in ipairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character then
+            local head = v.Character:FindFirstChild("Head"); local hum = v.Character:FindFirstChildOfClass("Humanoid")
+            if head and hum and hum.Health > 0 then
+                local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                    if dist < shortestDist then shortestDist = dist; closest = head end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+local function GetGroup(player)
+    if not player.Team then return "None" end
+    local name = string.lower(player.Team.Name)
+    if string.find(name, "police") or string.find(name, "guard") or string.find(name, "cop") then return "Police"
+    elseif string.find(name, "inmate") or string.find(name, "prisoner") then return "Inmates"
+    elseif string.find(name, "criminal") or string.find(name, "wanted") then return "Criminals" end
+    return "None"
+end
+
+local function UpdateESP(player)
+    if player == LocalPlayer then return end
+    local character = player.Character; if not character then return end
+    
+    local oldH = character:FindFirstChild("HackHighlight"); if oldH then oldH:Destroy() end
+    local oldN = character:FindFirstChild("HackName"); if oldN then oldN:Destroy() end
+
+    local group = GetGroup(player)
+    local color = Color3.fromRGB(255, 255, 255) -- Белый по умолчанию
+    local show = false
+
+    if group == "Police" then
+        color = espColors.Police; show = espEnabled.Police
+    elseif group == "Inmates" then
+        color = espColors.Inmates; show = espEnabled.Inmates
+    elseif group == "Criminals" then
+        color = espColors.Criminals; show = espEnabled.Criminals
+    else
+        show = (espEnabled.Police or espEnabled.Inmates or espEnabled.Criminals)
+    end
+
+    if not show then return end
+
+    local Highlight = Instance.new("Highlight")
+    Highlight.Name = "HackHighlight"; Highlight.Adornee = character; Highlight.FillTransparency = 1; Highlight.OutlineColor = color; Highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop; Highlight.Parent = character
+
+    local Head = character:FindFirstChild("Head")
+    if Head then
+        local Billboard = Instance.new("BillboardGui")
+        Billboard.Name = "HackName"; Billboard.Adornee = Head; Billboard.Size = UDim2.new(0, 100, 0, 38); Billboard.StudsOffset = Vector3.new(0, 2.8, 0); Billboard.AlwaysOnTop = true; Billboard.Parent = character
+        local NameLabel = Instance.new("TextLabel"); NameLabel.Size = UDim2.new(1, 0, 0.5, 0); NameLabel.BackgroundTransparency = 1; NameLabel.Text = player.Name; NameLabel.TextColor3 = color; NameLabel.Font = Enum.Font.GothamBold; NameLabel.TextSize = 10; NameLabel.TextStrokeTransparency = 0.5; NameLabel.Parent = Billboard
+        local HealthLabel = Instance.new("TextLabel"); HealthLabel.Position = UDim2.new(0, 0, 0.5, 0); HealthLabel.Size = UDim2.new(1, 0, 0.5, 0); HealthLabel.BackgroundTransparency = 1; HealthLabel.TextColor3 = color; HealthLabel.Font = Enum.Font.GothamBold; HealthLabel.TextSize = 10; HealthLabel.TextStrokeTransparency = 0.5; HealthLabel.Parent = Billboard
+        local function UpdateHealth() if HealthLabel.Parent then local hum = character:FindFirstChildOfClass("Humanoid") if hum then HealthLabel.Text = math.floor(hum.Health) .. "/" .. math.floor(hum.MaxHealth) end end end
+        UpdateHealth(); character.ChildAdded:Connect(function(c) if c:IsA("Humanoid") then c.HealthChanged:Connect(UpdateHealth) end end)
+    end
+end
+
+local function UpdateAllESP() for _, player in ipairs(Players:GetPlayers()) do if player ~= LocalPlayer then UpdateESP(player) end end end
+
+Players.PlayerAdded:Connect(function(p) 
+    p.CharacterAdded:Connect(function() task.wait(0.5) UpdateESP(p) end) 
+    p:GetPropertyChangedSignal("Team"):Connect(function() UpdateESP(p) end)
+end)
+for _, p in ipairs(Players:GetPlayers()) do 
+    if p ~= LocalPlayer then 
+        p.CharacterAdded:Connect(function() task.wait(0.5) UpdateESP(p) end) 
+        p:GetPropertyChangedSignal("Team"):Connect(function() UpdateESP(p) end)
+    end 
+end
+
+-- ==================== FREECAM ====================
+local function freezeCharacter()
+    local char = LocalPlayer.Character; if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart"); local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then 
+        savedWalkSpeed = hum.WalkSpeed; savedJumpPower = hum.JumpPower; savedJumpHeight = hum.JumpHeight
+        hum.WalkSpeed = 0; hum.JumpPower = 0; hum.JumpHeight = 0 
+    end
+    if hrp then savedHRP = hrp; savedHRPAnchored = hrp.Anchored; hrp.Anchored = true end
+end
+
+local function unfreezeCharacter()
+    local char = LocalPlayer.Character; local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then 
+        hum.WalkSpeed = savedWalkSpeed or 16; hum.JumpPower = savedJumpPower or 50; hum.JumpHeight = savedJumpHeight or 7.2
+        hum.PlatformStand = false
+        hum.Sit = false
+        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+    if savedHRP and savedHRP.Parent then savedHRP.Anchored = savedHRPAnchored or false end
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp then hrp.Anchored = false end
+    savedHRP = nil
+end
+
+local function buildRotation() return CFrame.fromAxisAngle(Vector3.yAxis, freecamRotation.X) * CFrame.fromAxisAngle(Vector3.xAxis, freecamRotation.Y) end
+
+local function startFreecam()
+    if freecamEnabled then return end
+    if flying then
+        flying = false
+        if flyConn then flyConn:Disconnect() flyConn = nil end
+        if noclipConn then noclipConn:Disconnect() noclipConn = nil end
+        if flyHum then flyHum.PlatformStand = false end
+        if uiFly then uiFly:Set({ CurrentValue = false }) end
+    end
+    freecamEnabled = true
+    savedCameraType = camera.CameraType; savedCameraSubject = camera.CameraSubject; savedCFrame = camera.CFrame
+    local look = camera.CFrame.LookVector; freecamRotation = Vector2.new(math.atan2(-look.X, -look.Z), math.asin(math.clamp(look.Y, -1, 1))); freecamPosition = camera.CFrame.Position
+    camera.CameraType = Enum.CameraType.Scriptable; UserInputService.MouseBehavior = Enum.MouseBehavior.Default; UserInputService.MouseIconEnabled = true; freezeCharacter()
+end
+
+local function stopFreecam()
+    if not freecamEnabled then return end; freecamEnabled = false; freecamRotating = false
+    local char = LocalPlayer.Character; local hum = char and char:FindFirstChildOfClass("Humanoid")
+    camera.CameraType = Enum.CameraType.Custom
+    if hum then camera.CameraSubject = hum end
+    UserInputService.MouseBehavior = Enum.MouseBehavior.Default; UserInputService.MouseIconEnabled = true; freecamHeldKeys = {}
+    unfreezeCharacter()
+end
+
+RunService:BindToRenderStep("FreecamFrozen", Enum.RenderPriority.Camera.Value + 1, function(dt)
+    if not freecamEnabled then return end
+    local rot = buildRotation(); local move = Vector3.zero
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then move += Vector3.zAxis * -1 end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then move += Vector3.zAxis end
+    if UserInputService:IsKeyDown(Enum.KeyCode.A) then move += Vector3.xAxis * -1 end
+    if UserInputService:IsKeyDown(Enum.KeyCode.D) then move += Vector3.xAxis end
+    if UserInputService:IsKeyDown(Enum.KeyCode.E) or UserInputService:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.yAxis end
+    if UserInputService:IsKeyDown(Enum.KeyCode.Q) or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.yAxis end
+    if move.Magnitude > 0 then move = move.Unit end
+    local currentSpeed = freecamSpeed; if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then currentSpeed *= 3 end
+    freecamPosition += rot:VectorToWorldSpace(move) * currentSpeed * dt; camera.CFrame = CFrame.new(freecamPosition) * rot
+end)
+
+-- ==================== ТЕЛЕПОРТ ====================
+local markerPart = Instance.new("Part")
+markerPart.Name = "TeleportMarker"; markerPart.Anchored = true; markerPart.CanCollide = false; markerPart.Transparency = 1; markerPart.Size = Vector3.new(5, 0.1, 5); markerPart.Parent = camera
+local surfaceGui = Instance.new("SurfaceGui")
+surfaceGui.Name = "MarkerGui"; surfaceGui.Face = Enum.NormalId.Top; surfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud; surfaceGui.PixelsPerStud = 50; surfaceGui.AlwaysOnTop = true; surfaceGui.Enabled = false; surfaceGui.Parent = markerPart
+local container = Instance.new("Frame"); container.Size = UDim2.fromScale(1, 1); container.BackgroundTransparency = 1; container.Parent = surfaceGui
+local redGlow = Instance.new("Frame"); redGlow.Size = UDim2.fromScale(0.9, 0.6); redGlow.Position = UDim2.fromScale(0.05, -0.1); redGlow.BackgroundColor3 = Color3.fromRGB(255, 0, 0); redGlow.BackgroundTransparency = 0.4; redGlow.Parent = container
+local glowCorner = Instance.new("UICorner") glowCorner.CornerRadius = UDim.new(1, 0) glowCorner.Parent = redGlow
+local redTriangle = Instance.new("TextLabel"); redTriangle.Size = UDim2.fromScale(0.7, 0.7); redTriangle.Position = UDim2.fromScale(0.15, 0.15); redTriangle.BackgroundTransparency = 1; redTriangle.Text = "▼"; redTriangle.TextColor3 = Color3.fromRGB(255, 0, 0); redTriangle.TextScaled = true; redTriangle.Font = Enum.Font.GothamBold; redTriangle.Parent = container
+
+local function getRaycastResult()
+    local mousePos = UserInputService:GetMouseLocation(); local ray = camera:ViewportPointToRay(mousePos.X, mousePos.Y)
+    local params = RaycastParams.new(); params.FilterType = Enum.RaycastFilterType.Exclude; local filter = {markerPart}
+    if LocalPlayer.Character then table.insert(filter, LocalPlayer.Character) end
+    params.FilterDescendantsInstances = filter
+    return workspace:Raycast(ray.Origin, ray.Direction * MAX_DISTANCE, params)
+end
+
+RunService.RenderStepped:Connect(function()
+    if not teleportEnabled or not markerEnabled then surfaceGui.Enabled = false; return end
+    local result = getRaycastResult()
+    if result then
+        surfaceGui.Enabled = true; local pos = result.Position; local normal = result.Normal
+        local right = normal:Cross(Vector3.new(0, 1, 0)); if right.Magnitude < 0.01 then right = normal:Cross(Vector3.new(1, 0, 0)) end; right = right.Unit
+        local forward = right:Cross(normal).Unit; markerPart.CFrame = CFrame.fromMatrix(pos + normal * 0.05, right, normal, forward)
+    else surfaceGui.Enabled = false end
+end)
+
+-- ==================== ПРИВЯЗКА К GUI ====================
+local secCombat = TabCombat:CreateSection("Hitbox & Aimbot")
+
+local uiHitbox = secCombat:CreateToggle({
+    Name = "Hitbox Expander", Description = "Увеличивает хитбокс игроков", CurrentValue = true,
+    Callback = function(state)
+        hitboxEnabled = state
+        if state then for _, v in ipairs(Players:GetPlayers()) do if v ~= LocalPlayer then updateHitbox(v.Character) end end
+        else for _, v in ipairs(Players:GetPlayers()) do if v ~= LocalPlayer then resetHitbox(v.Character) end end end
+    end,
+})
+
+secCombat:CreateSlider({
+    Name = "Hitbox Size", Range = {1, 50}, Increment = 1, CurrentValue = 15,
+    Callback = function(val) _G.HeadSize = val; if hitboxEnabled then for _, v in ipairs(Players:GetPlayers()) do if v ~= LocalPlayer then updateHitbox(v.Character) end end end end,
+})
+
+local uiAimbot = secCombat:CreateToggle({
+    Name = "Aimbot (Hotkey: X)", Description = "Наводится на ближайшего игрока", CurrentValue = false,
+    Callback = function(state)
+        aimbotEnabled = state
+        if state then
+            if aimbotConn then aimbotConn:Disconnect() end
+            aimbotConn = RunService.RenderStepped:Connect(function()
+                if aimbotEnabled then
+                    local target = getClosestPlayer()
+                    if target then camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, target.Position), aimbotSmooth) end
+                end
+            end)
+        else if aimbotConn then aimbotConn:Disconnect() aimbotConn = nil end end
+    end,
+})
+
+local secFly = TabMovement:CreateSection("Fly")
+local uiFly = secFly:CreateToggle({
+    Name = "CFrame Fly (Hotkey: +)", Description = "Позволяет летать", CurrentValue = false,
+    Callback = function(state)
+        flying = state
+        if flying then
+            if freecamEnabled then stopFreecam(); if uiFreecam then uiFreecam:Set({ CurrentValue = false }) end end
+            local char = LocalPlayer.Character; if not char then flying = false return end
+            local hrp = char:FindFirstChild("HumanoidRootPart"); flyHum = char:FindFirstChildOfClass("Humanoid")
+            if hrp and flyHum then
+                flyHum.PlatformStand = true
+                noclipConn = RunService.Stepped:Connect(function() if not char or not flying then return end; for _, part in pairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end end)
+                flyConn = RunService.RenderStepped:Connect(function(dt)
+                    if not flying or not hrp then return end
+                    hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero
+                    local moveDir = Vector3.new(0,0,0)
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end; if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end; if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end; if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
+                    if moveDir.Magnitude > 0 then hrp.CFrame = CFrame.new(hrp.Position + (moveDir.Unit * flySpeed * dt), (hrp.Position + (moveDir.Unit * flySpeed * dt)) + camera.CFrame.LookVector) else hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + camera.CFrame.LookVector) end
+                end)
+            end
+        else
+            if flyConn then flyConn:Disconnect() flyConn = nil end; if noclipConn then noclipConn:Disconnect() noclipConn = nil end; if flyHum then flyHum.PlatformStand = false end
+            local char = LocalPlayer.Character; if char then for _, part in pairs(char:GetDescendants()) do if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.CanCollide = true end end end
+        end
+    end,
+})
+secFly:CreateSlider({ Name = "Fly Speed", Range = {10, 500}, Increment = 10, CurrentValue = 50, Callback = function(val) flySpeed = val end })
+
+local secCam = TabMovement:CreateSection("Freecam")
+local uiFreecam = secCam:CreateToggle({
+    Name = "Freecam (Hotkey: RShift)", Description = "Свободная камера", CurrentValue = false,
+    Callback = function(state) if state then startFreecam() else stopFreecam() end end,
+})
+secCam:CreateSlider({ Name = "Freecam Speed", Range = {10, 500}, Increment = 10, CurrentValue = 50, Callback = function(val) freecamSpeed = val end })
+
+local secVisuals = TabVisuals:CreateSection("Player ESP")
+secVisuals:CreateToggle({ Name = "Police ESP", Description = "Синий контур", CurrentValue = false, Callback = function(state) espEnabled.Police = state UpdateAllESP() end })
+secVisuals:CreateToggle({ Name = "Inmate ESP", Description = "Оранжевый контур", CurrentValue = false, Callback = function(state) espEnabled.Inmates = state UpdateAllESP() end })
+secVisuals:CreateToggle({ Name = "Criminal ESP", Description = "Красный контур", CurrentValue = false, Callback = function(state) espEnabled.Criminals = state UpdateAllESP() end })
+
+local secUtil = TabUtility:CreateSection("Teleport")
+local uiTeleport = secUtil:CreateToggle({
+    Name = "Click Teleport (Hotkey: T)", Description = "ТП по клику", CurrentValue = false,
+    Callback = function(state) teleportEnabled = state end,
+})
+secUtil:CreateToggle({
+    Name = "3D Marker", Description = "Показывает маркер под курсором", CurrentValue = true,
+    Callback = function(state) markerEnabled = state; if not state then surfaceGui.Enabled = false end end,
+})
+
+-- События
+Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function(char) task.wait(0.5) UpdateESP(p) end); p:GetPropertyChangedSignal("Team"):Connect(function() UpdateESP(p) end) end)
+for _, p in ipairs(Players:GetPlayers()) do if p ~= LocalPlayer then p.CharacterAdded:Connect(function(char) task.wait(0.5) UpdateESP(p) end); p:GetPropertyChangedSignal("Team"):Connect(function() UpdateESP(p) end) end end
+
+LocalPlayer.CharacterAdded:Connect(function()
+    if flying then flying = false; if flyConn then flyConn:Disconnect() end; if noclipConn then noclipConn:Disconnect() end; if uiFly then uiFly:Set({ CurrentValue = false }) end end
+    if freecamEnabled then stopFreecam(); if uiFreecam then uiFreecam:Set({ CurrentValue = false }) end end
+end)
+
+-- ==================== ХОТКЕИ ====================
+local guiObj = LunaUI.SmartWindow
+guiObj.MouseEnter:Connect(function() mouseOverGui = true end)
+guiObj.MouseLeave:Connect(function() mouseOverGui = false end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if UserInputService:GetFocusedTextBox() then return end
+
+    if input.KeyCode == Enum.KeyCode.X then uiAimbot:Set({ CurrentValue = not uiAimbot.CurrentValue })
+    elseif input.KeyCode == Enum.KeyCode.Equals or input.KeyCode == Enum.KeyCode.KeypadPlus then uiFly:Set({ CurrentValue = not uiFly.CurrentValue })
+    elseif input.KeyCode == Enum.KeyCode.RightShift then uiFreecam:Set({ CurrentValue = not uiFreecam.CurrentValue })
+    elseif input.KeyCode == Enum.KeyCode.T then uiTeleport:Set({ CurrentValue = not uiTeleport.CurrentValue }) end
+    
+    if freecamEnabled and input.UserInputType == Enum.UserInputType.MouseButton2 then
+        freecamRotating = true; UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter; UserInputService.MouseIconEnabled = false; return
+    end
+    freecamHeldKeys[input.KeyCode] = true
+
+    if not teleportEnabled then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+    if mouseOverGui then return end
+
+    local char = LocalPlayer.Character; if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart"); local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
+
+    local result = getRaycastResult()
+    if result then hrp.CFrame = CFrame.new(result.Position + Vector3.new(0, HEIGHT_OFFSET, 0)); hrp.AssemblyLinearVelocity = Vector3.zero; hrp.AssemblyAngularVelocity = Vector3.zero end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 and freecamRotating then
+        freecamRotating = false
+        if freecamEnabled then UserInputService.MouseBehavior = Enum.MouseBehavior.Default; UserInputService.MouseIconEnabled = true end
+        return
+    end
+    freecamHeldKeys[input.KeyCode] = false
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if not freecamEnabled then return end
+    if input.UserInputType == Enum.UserInputType.MouseMovement and freecamRotating then
+        freecamRotation = Vector2.new(freecamRotation.X - input.Delta.X * 0.003, math.clamp(freecamRotation.Y - input.Delta.Y * 0.003, -math.pi/2 + 0.01, math.pi/2 - 0.01))
+    end
+end)
+
+return Luna
